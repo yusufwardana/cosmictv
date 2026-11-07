@@ -50,7 +50,7 @@ class HttpError extends Error {
  */
 export function createApp({ service, settings, adminToken, publicDir, allowAdmin = true, allowLoopbackAdmin = false, readTokens = [], readTokenRequired, allowQueryToken = true, publicOrigin = '', rateLimit = 300, authFailLimit = 20, runtimeConfig }) {
   let lastManualRefresh = 0;
-  const staticFiles = { '/': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/app.js': ['app.js', 'text/javascript; charset=utf-8'] };
+  const staticFiles = { '/': ['index.html', 'text/html; charset=utf-8'], '/style.css': ['style.css', 'text/css; charset=utf-8'], '/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/player.html': ['player.html', 'text/html; charset=utf-8'], '/player.js': ['player.js', 'text/javascript; charset=utf-8'], '/player.css': ['player.css', 'text/css; charset=utf-8'], '/shaka-player.compiled.js': ['shaka-player.compiled.js', 'text/javascript; charset=utf-8'] };
   const cfg = runtimeConfig || { rateLimit, authFailLimit };
   if (cfg.rateLimit === undefined) cfg.rateLimit = rateLimit;
   if (cfg.authFailLimit === undefined) cfg.authFailLimit = authFailLimit;
@@ -65,7 +65,13 @@ export function createApp({ service, settings, adminToken, publicDir, allowAdmin
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    // The dashboard only talks to its own origin, but the player (player.html) must reach
+    // third-party stream/CDN hosts. Media segments arrive as blob:/data: through Shaka (MSE).
+    const isPlayer = String(req.url || '').startsWith('/player');
+    const policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'" +
+      (isPlayer ? ' https: blob: data:' : '') +
+      "; media-src 'self' blob: data: https:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'";
+    res.setHeader('Content-Security-Policy', policy);
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>COSMIC TV — Player</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1220'/%3E%3Cpath d='M12 8L25 16 12 24Z' fill='%236ee7b7'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/player.css">
+  <!-- Shaka Player HARUS di-vendor ke public/shaka-player.compiled.js (lihat README).
+       CDN sengaja tidak dipakai: CSP server hanya mengizinkan script dari 'self',
+       dan server tidak mengirim header CORS, jadi player harus disajikan dari origin yang sama. -->
+  <script src="/shaka-player.compiled.js"></script>
+  <script src="/player.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="mark" aria-hidden="true">▶</span><span class="brand-name">COSMIC<span>TV</span></span><small class="brand-sub">PLAYER</small></a>
+    <span class="connection" id="connection">Belum terhubung</span>
+    <a class="ghost-btn" href="/">Dashboard</a>
+  </header>
+
+  <main>
+    <div id="notice" class="notice" role="status" hidden></div>
+
+    <section class="card" aria-labelledby="conn-heading">
+      <h2 id="conn-heading">Koneksi ke server</h2>
+      <p class="muted">Player ini memanggil API di origin yang sama. <code>/api/v1/channels</code> dan <code>/api/v1/catalog</code> wajib token baca (<code>READ_TOKENS</code>) lewat header <code>Authorization: Bearer</code>. Token <strong>tidak</strong> ditulis di file ini dan hanya disimpan di sesi browser ini.</p>
+      <div class="form-grid">
+        <label>Origin server
+          <input id="origin" type="url" placeholder="https://tv.cosmiclabs.web.id">
+          <small>Default: origin halaman ini. Untuk tes lokal: <code>http://127.0.0.1:8787</code></small>
+        </label>
+        <label>Token baca (READ_TOKENS)
+          <input id="token" type="password" autocomplete="off" placeholder="Tempel token baca di sini">
+          <small>Disimpan di <code>sessionStorage</code> saja. Tutup tab = hilang.</small>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="primary-btn" id="load" type="button">Muat katalog</button>
+        <button class="ghost-btn" id="forget-token" type="button">Lupakan token</button>
+        <button class="ghost-btn" id="load-sample" type="button">Muat contoh (tanpa token)</button>
+      </div>
+      <p id="auth-state" class="muted" role="status"></p>
+    </section>
+
+    <div class="layout">
+      <section class="player-col">
+        <div class="video-wrap">
+          <video id="video" controls playsinline preload="metadata"></video>
+        </div>
+        <p id="now-playing" class="now-playing">Belum ada channel yang diputar.</p>
+        <p id="player-status" class="muted" role="status">Status: Siap.</p>
+
+        <section class="card" aria-labelledby="license-heading">
+          <h2 id="license-heading">Panel lisensi / stream</h2>
+          <dl class="license" id="license-panel">
+            <div><dt>Jenis stream</dt><dd id="lic-type">—</dd></div>
+            <div><dt>URL</dt><dd id="lic-url">—</dd></div>
+            <div><dt>License server / ClearKey</dt><dd id="lic-server">—</dd></div>
+            <div><dt>Header tambahan</dt><dd id="lic-headers">—</dd></div>
+          </dl>
+          <p class="muted small">Channel <strong>Perlu DRM</strong> tidak bisa diputar dari API ini: <code>/api/v1/channels</code> hanya berisi stream yang lolos pemeriksaan (tanpa DRM), dan <code>/api/v1/catalog</code> tidak menyertakan URL stream maupun <code>drmConfig</code>/lisensi. Itu keputusan server yang sengaja, bukan bug player.</p>
+        </section>
+
+        <section class="card" aria-labelledby="m3u-heading">
+          <h2 id="m3u-heading">Playlist M3U untuk APK</h2>
+          <p class="muted">Untuk <code>/playlist.m3u</code>, token boleh lewat <code>?token=</code> (satu-satunya endpoint yang mendukung itu). Hati-hati: token di URL bisa tercatat di log server/proxy.</p>
+          <div class="url-box">
+            <span class="method">GET</span>
+            <input id="playlist-url" readonly value="/playlist.m3u">
+            <button id="copy-playlist" class="ghost-btn" type="button">Salin</button>
+          </div>
+          <p><a id="download-m3u" href="/playlist.m3u" download="COSMIC-TV.m3u">Unduh .m3u ↓</a></p>
+        </section>
+      </section>
+
+      <aside class="catalog-col">
+        <section class="card" aria-labelledby="catalog-heading">
+          <div class="card-head">
+            <div><span class="eyebrow">KATALOG</span><h2 id="catalog-heading">Channel</h2></div>
+            <span id="counts" class="muted">—</span>
+          </div>
+          <div class="filters">
+            <label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Cari channel</span><input id="search" type="search" placeholder="Cari nama channel…" autocomplete="off"></label>
+            <select id="group" aria-label="Kategori channel"><option value="">Semua kategori</option></select>
+            <select id="health-filter" aria-label="Status pemeriksaan">
+              <option value="">Semua status</option>
+              <option value="working">Media terbaca</option>
+              <option value="failed">Gagal</option>
+              <option value="unchecked">Belum diperiksa</option>
+              <option value="drm">Perlu DRM</option>
+              <option value="unsupported">Belum didukung</option>
+            </select>
+            <label class="checkbox"><input type="checkbox" id="playable-only">Hanya yang bisa diputar</label>
+          </div>
+          <ul id="channels" class="channel-list"><li class="empty">Muat katalog dulu, atau klik “Muat contoh”.</li></ul>
+          <p id="results" class="results" aria-live="polite"></p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer><span>COSMIC TV <span class="footer-dot">/</span> Player</span><span id="status-line" class="muted">—</span></footer>
+</body>
+</html>
