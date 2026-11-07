@@ -22,7 +22,7 @@ Maksimum 20 feed dan 3.000 kandidat stream. Sumber URL, redirect dan URL segmen 
 Konfigurasi lokal `.env` sudah diisi dari format aplikasi yang dikonfirmasi pada APK v1.0.8. Untuk instalasi lain, salin `.env.example` menjadi `.env` dan isikan `UPSTREAM_SECRET`, `DEVICE_ID` (ID acak yang stabil) dan `ADMIN_TOKEN` (minimal 24 karakter). Pertahankan tanda kutip pada `UPSTREAM_SECRET` karena `#` tanpa kutip dianggap komentar oleh parser `.env`. Rahasia sumber tidak dikirim ke browser. Jangan membagikan `.env`.
 
 ```powershell
-cd D:\Tools\DopamineTV\web
+cd D:\Tools\
 .\start.ps1
 # Hentikan:
 .\stop.ps1
