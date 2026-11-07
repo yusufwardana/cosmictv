@@ -1,0 +1,30 @@
+services:
+  playlist:
+    build: .
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      ADMIN_HOST: 127.0.0.1
+    ports:
+      - "127.0.0.1:8787:8787"   # publik: playlist + API baca (di balik reverse proxy)
+      - "127.0.0.1:8788:8788"   # admin: dashboard + mutasi, hanya loopback
+    volumes:
+      - playlist-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/v1/status').then(r=>process.exit(r.status===200?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+volumes:
+  playlist-data:

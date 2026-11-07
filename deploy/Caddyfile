@@ -1,0 +1,42 @@
+# Caddyfile — TLS + pemisahan admin/publik untuk COSMIC TV
+# Ganti domain dan email. Validasi dengan `caddy validate --config Caddyfile` sebelum reload.
+# Butuh DNS A/AAAA tv.domain-anda.id -> IP VPS dan port 80/443 terbuka.
+
+{
+	email admin@domain-anda.id
+}
+
+tv.domain-anda.id {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	# Panel admin (dashboard + mutasi) hanya untuk jaringan tepercaya.
+	# Sesuaikan remote_ip dengan LAN/VPN Anda; tambah alamat tunnel jika memakai SSH -L.
+	@admin path / /style.css /app.js /runtime.js /api/v1/selection* /api/v1/sources* /api/v1/refresh
+	handle @admin {
+		@trusted remote_ip 127.0.0.1 10.10.12.0/24
+		handle @trusted {
+			reverse_proxy 127.0.0.1:8788
+		}
+		respond "Forbidden" 403
+	}
+
+	# Sisanya: API baca + playlist untuk pemutar/APK.
+	handle {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# Query string memuat token bila pemutar memakai ?token=. Matikan log akses
+	# atau saring URI kalau token tidak boleh tercatat.
+	log {
+		output file /var/log/caddy/cosmic-tv.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+		format json
+	}
+}

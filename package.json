@@ -1,0 +1,12 @@
+{
+  "name": "cosmic-tv-playlist-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check server.mjs && node --check src/playlist.mjs && node --check src/service.mjs && node --check src/http.mjs && node --check src/import.mjs && node --check src/network.mjs && node --check src/probe.mjs && node --check src/aggregate.mjs && node --check public/app.js"
+  }
+}

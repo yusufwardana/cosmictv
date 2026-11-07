@@ -1,0 +1,11 @@
+# COSMIC TV playlist service
+
+Create a standalone Node.js 22+ application in D:/Tools/DopamineTV/web. The existing CosmicLink application is unrelated and is left untouched. The user requested implementation, including automatic updates and their own API.
+
+The server signs requests to the fixed upstream channels endpoint using the application request format already confirmed in this session. Credentials and a stable generated device ID belong in .env, never browser code. Refresh immediately on startup and every 900 seconds, with a 20 second timeout, an 8 MiB response limit and a single shared refresh promise. Keep the last validated snapshot on HTTP, parse or persistence failure. Persist snapshots using a temporary file and atomic rename. Load validated snapshots at startup.
+
+Expose GET/HEAD /playlist.m3u (alias /api/v1/playlist.m3u), GET /api/v1/channels, GET /api/v1/catalog and GET /api/v1/status. Playlists support q, group and drm=exclude filters; include every valid HTTP(S) source, source headers and original DRM metadata in compatible Kodi properties. Conversion does not decrypt streams or obtain licenses. Status distinguishes unavailable, ready and stale data. Serve cached data without fetching upstream on every player request. Use ETags. POST /api/v1/refresh requires an administrator bearer token and has a 30 second cooldown. The dashboard provides search, category filtering, copy/download URLs, freshness and a token prompt for manual refresh.
+
+Default bind is 127.0.0.1:8787. A Windows launcher runs hidden; a Dockerfile and deployment instructions support a public server. A public domain requires deployment infrastructure; local completion must not claim a public URL exists. No database or npm runtime dependencies. Cached channels and licenses are served as requested through the read API; secret signing and administrator tokens stay private.
+
+Verify conversion, malformed upstream responses, stale cache retention, concurrent refreshes, cache restart, authorization, filtered M3U output, ETags and API errors using node:test and temporary directories. Verify live upstream refresh and local HTTP endpoints after launching. No claim that every media source plays.
